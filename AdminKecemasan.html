@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <title>Admin Kecemasan - Dashboard Hanna</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .emergency-glow { box-shadow: 0 0 20px rgba(220, 38, 38, 0.3); }
+        .done-glow { box-shadow: 0 0 15px rgba(16, 185, 129, 0.1); }
+    </style>
+</head>
+<body class="bg-[#0f172a] text-white p-8 font-sans">
+
+    <audio id="notifSound" src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3" preload="auto"></audio>
+
+    <div id="lock" class="fixed inset-0 bg-[#0f172a] z-50 flex flex-col items-center justify-center">
+        <div class="bg-slate-800 p-10 rounded-[3rem] shadow-2xl text-center border-2 border-red-600/30 w-full max-w-sm mx-4">
+            <div class="text-6xl mb-6">🔐</div>
+            <h2 class="mb-2 font-black text-2xl tracking-tight text-white uppercase">Admin Access</h2>
+            <p class="text-slate-400 text-xs mb-8 font-bold tracking-widest uppercase">Hanna Nurhasanah Only</p>
+            
+            <input type="password" id="inputPin" class="bg-slate-900 text-white p-5 rounded-2xl mb-4 text-center text-2xl font-black outline-none w-full border-2 border-slate-700 focus:border-red-500 transition-all tracking-[0.5em]" placeholder="****">
+            
+            <button onclick="cekLogin()" class="bg-red-600 w-full py-5 rounded-2xl font-black hover:bg-red-700 transition shadow-xl shadow-red-900/40 uppercase tracking-[0.2em] active:scale-95">
+                Buka Panel 🚨
+            </button>
+        </div>
+    </div>
+
+    <div id="dash" class="hidden max-w-4xl mx-auto">
+        <div class="flex justify-between items-end mb-10 border-b-2 border-red-600/20 pb-6">
+            <div>
+                <h1 class="text-4xl font-black text-red-600 italic tracking-tighter uppercase">Admin Page</h1>
+                <p class="text-slate-400 text-sm mt-1 uppercase tracking-widest font-bold italic">Admin Hanna Nurhasanah</p>
+            </div>
+            <button onclick="location.reload()" class="bg-slate-800 px-6 py-2 rounded-full text-[10px] font-black hover:bg-red-600 transition-all uppercase tracking-widest border border-slate-700">Logout</button>
+        </div>
+
+        <div class="flex gap-4 mb-8">
+            <button onclick="gantiTab('aktif')" id="tabAktif" class="flex-1 py-4 rounded-2xl font-black uppercase tracking-widest text-xs transition-all border-2 border-red-600 bg-red-600 shadow-lg shadow-red-900/20">
+                🚨 Aktif (<span id="countAktif">0</span>)
+            </button>
+            <button onclick="gantiTab('selesai')" id="tabSelesai" class="flex-1 py-4 rounded-2xl font-black uppercase tracking-widest text-xs transition-all border-2 border-slate-700 bg-slate-800 text-slate-400">
+                ✅ Selesai (<span id="countSelesai">0</span>)
+            </button>
+        </div>
+        
+        <div id="konten" class="space-y-6"></div>
+    </div>
+
+    <script>
+        let tabSekarang = 'aktif';
+        const PIN_BENAR = "1234"; 
+        
+        // Simpan jumlah data awal untuk mendeteksi laporan baru
+        let jumlahDataLama = JSON.parse(localStorage.getItem('dataLaporan') || "[]").length;
+
+        function cekLogin() {
+            const input = document.getElementById('inputPin').value;
+            if(input === PIN_BENAR) {
+                document.getElementById('lock').classList.add('hidden');
+                document.getElementById('dash').classList.remove('hidden');
+                tampilData();
+                
+                // Mulai mengecek laporan baru setiap 3 detik
+                setInterval(cekLaporanBaru, 3000);
+            } else {
+                alert("PIN Salah! Akses Ditolak.");
+                document.getElementById('inputPin').value = "";
+            }
+        }
+
+        // FUNGSI CEK LAPORAN BARU & BUNYI TING
+        function cekLaporanBaru() {
+            const list = JSON.parse(localStorage.getItem('dataLaporan') || "[]");
+            
+            if (list.length > jumlahDataLama) {
+                // Bunyikan suara
+                const sound = document.getElementById('notifSound');
+                sound.currentTime = 0; // Mulai dari awal suara
+                sound.play(); 
+                
+                // Update pembanding agar tidak bunyi terus-menerus
+                jumlahDataLama = list.length; 
+                
+                // Refresh tampilan
+                tampilData();
+            }
+        }
+
+        function gantiTab(tab) {
+            tabSekarang = tab;
+            const btnAktif = document.getElementById('tabAktif');
+            const btnSelesai = document.getElementById('tabSelesai');
+
+            if(tab === 'aktif') {
+                btnAktif.className = "flex-1 py-4 rounded-2xl font-black uppercase tracking-widest text-xs transition-all border-2 border-red-600 bg-red-600 text-white shadow-lg shadow-red-900/20";
+                btnSelesai.className = "flex-1 py-4 rounded-2xl font-black uppercase tracking-widest text-xs transition-all border-2 border-slate-700 bg-slate-800 text-slate-400";
+            } else {
+                btnSelesai.className = "flex-1 py-4 rounded-2xl font-black uppercase tracking-widest text-xs transition-all border-2 border-green-600 bg-green-600 text-white shadow-lg shadow-green-900/20";
+                btnAktif.className = "flex-1 py-4 rounded-2xl font-black uppercase tracking-widest text-xs transition-all border-2 border-slate-700 bg-slate-800 text-slate-400";
+            }
+            tampilData();
+        }
+
+        function tampilData() {
+            const list = JSON.parse(localStorage.getItem('dataLaporan') || "[]");
+            const konten = document.getElementById('konten');
+            
+            const dataAktif = list.filter(l => !l.sudahDitangani);
+            const dataSelesai = list.filter(l => l.sudahDitangani);
+            
+            document.getElementById('countAktif').innerText = dataAktif.length;
+            document.getElementById('countSelesai').innerText = dataSelesai.length;
+
+            const dataTampil = tabSekarang === 'aktif' ? dataAktif : dataSelesai;
+
+            if(dataTampil.length === 0) {
+                konten.innerHTML = `<div class="text-center py-20 bg-slate-800/30 rounded-[2.5rem] border-2 border-dashed border-slate-700 text-slate-500 font-bold uppercase tracking-widest text-xs">Belum ada laporan ${tabSekarang}</div>`;
+                return;
+            }
+
+            konten.innerHTML = dataTampil.slice().reverse().map((l) => {
+                const indexAsli = list.findIndex(item => item.waktu === l.waktu);
+                
+                let badgeClass = "bg-slate-700 text-slate-300";
+                if(l.prioritas.includes('AMBULANS')) badgeClass = "bg-blue-600 text-white shadow-lg shadow-blue-900/40"; 
+                if(l.prioritas.includes('DAMKAR')) badgeClass = "bg-orange-500 text-white shadow-lg shadow-orange-900/40"; 
+                if(l.prioritas.includes('SAR')) badgeClass = "bg-yellow-400 text-black shadow-lg shadow-yellow-900/20"; 
+                if(l.prioritas.includes('SOS')) badgeClass = "bg-red-600 text-white animate-pulse border-2 border-white shadow-lg shadow-red-900/40";
+
+                return `
+                <div class="relative overflow-hidden p-6 rounded-[2.5rem] border-2 transition-all duration-500 ${l.sudahDitangani ? 'bg-slate-800/40 border-slate-700 done-glow' : 'bg-slate-800 border-red-600/40 emergency-glow'}">
+                    <div class="flex justify-between items-center mb-4">
+                        <span class="text-[10px] font-black uppercase tracking-widest text-slate-500">${l.waktu}</span>
+                        <span class="text-[9px] px-3 py-1 rounded-full font-black uppercase tracking-widest ${badgeClass}">
+                            ${l.prioritas}
+                        </span>
+                    </div>
+                    
+                    <div class="mb-6">
+                        <span class="text-[10px] font-black text-red-500 uppercase italic">👤 Pelapor: ${l.nama || 'Anonim'}</span>
+                        <h3 class="text-2xl font-bold mt-1 ${l.sudahDitangani ? 'text-slate-500 line-through' : 'text-white'}">
+                            "${l.teks}"
+                        </h3>
+                    </div>
+
+                    <div class="flex justify-between items-center pt-4 border-t border-slate-700/50">
+                        <a href="https://www.google.com/maps?q=${l.lokasi}" target="_blank" class="text-blue-400 text-[10px] font-black uppercase hover:underline flex items-center gap-1">📍 Lokasi Peta</a>
+                        
+                        ${!l.sudahDitangani ? 
+                            `<button onclick="tandaiSelesai(${indexAsli})" class="bg-white text-black hover:bg-green-600 hover:text-white px-6 py-2 rounded-xl text-[10px] font-black uppercase transition-all shadow-md">
+                                Selesai Ditangani
+                            </button>` : 
+                            `<span class="text-green-500 font-black uppercase text-[9px] tracking-widest">✅ Operasi Selesai</span>`
+                        }
+                    </div>
+                </div>
+            `}).join('');
+        }
+
+        function tandaiSelesai(index) {
+            let list = JSON.parse(localStorage.getItem('dataLaporan') || "[]");
+            list[index].sudahDitangani = true;
+            localStorage.setItem('dataLaporan', JSON.stringify(list));
+            
+            // Update juga pembandingnya agar tidak dianggap data baru
+            jumlahDataLama = list.length;
+            
+            tampilData();
+        }
+    </script>
+</body>
+</html>
