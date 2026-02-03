@@ -111,7 +111,6 @@
 
             overlay.classList.remove('hidden');
             
-            // Step 1: Mengirim
             setTimeout(() => {
                 bar.style.width = "30%";
                 title.innerText = "Laporan Diterima!";
@@ -119,7 +118,6 @@
                 icon.innerText = "✅";
             }, 1500);
 
-            // Step 2: Menuju Lokasi
             setTimeout(() => {
                 bar.style.width = "70%";
                 title.innerText = "Petugas Meluncur!";
@@ -128,7 +126,6 @@
                 bar.classList.add('bg-blue-500');
             }, 3500);
 
-            // Step 3: Selesai
             setTimeout(() => {
                 bar.style.width = "100%";
                 title.innerText = "Pantau GPS Anda";
@@ -158,6 +155,13 @@
         }
 
         function kirimKeStorage(nama, pesan, status) {
+            // Pengaturan tambahan agar GPS lebih akurat di HP
+            const gpsOptions = {
+                enableHighAccuracy: true,
+                timeout: 10000,
+                maximumAge: 0
+            };
+
             navigator.geolocation.getCurrentPosition((pos) => {
                 const data = { 
                     nama: nama,
@@ -172,10 +176,22 @@
                 daftar.push(data);
                 localStorage.setItem('dataLaporan', JSON.stringify(daftar));
                 
-                // PANGGIL SIMULASI STATUS
                 simulasiStatus(armadaTerpilih);
                 
-            }, (err) => { alert("Aktifkan GPS Anda!"); });
+            }, (err) => { 
+                // Jika GPS gagal, tetap kirim laporan tanpa lokasi agar tidak macet
+                console.warn("GPS Error:", err);
+                const data = { 
+                    nama: nama, teks: pesan, prioritas: status, 
+                    waktu: new Date().toLocaleString('id-ID'), 
+                    lokasi: "Lokasi tidak diizinkan", sudahDitangani: false 
+                };
+                let daftar = JSON.parse(localStorage.getItem('dataLaporan') || "[]");
+                daftar.push(data);
+                localStorage.setItem('dataLaporan', JSON.stringify(daftar));
+                simulasiStatus(armadaTerpilih);
+                alert("Laporan terkirim tanpa koordinat GPS (Izin ditolak).");
+            }, gpsOptions);
         }
     </script>
 </body>
