@@ -51,18 +51,21 @@
     <script>
         let tabSekarang = 'aktif';
         const PIN_BENAR = "1234"; 
-        
-        // Simpan jumlah data awal untuk mendeteksi laporan baru
         let jumlahDataLama = JSON.parse(localStorage.getItem('dataLaporan') || "[]").length;
 
         function cekLogin() {
             const input = document.getElementById('inputPin').value;
             if(input === PIN_BENAR) {
+                // PENTING: Memancing audio agar diizinkan di browser HP
+                const sound = document.getElementById('notifSound');
+                sound.play().then(() => {
+                    sound.pause();
+                    sound.currentTime = 0;
+                }).catch(e => console.log("Audio waiting for interaction"));
+
                 document.getElementById('lock').classList.add('hidden');
                 document.getElementById('dash').classList.remove('hidden');
                 tampilData();
-                
-                // Mulai mengecek laporan baru setiap 3 detik
                 setInterval(cekLaporanBaru, 3000);
             } else {
                 alert("PIN Salah! Akses Ditolak.");
@@ -70,20 +73,14 @@
             }
         }
 
-        // FUNGSI CEK LAPORAN BARU & BUNYI TING
         function cekLaporanBaru() {
             const list = JSON.parse(localStorage.getItem('dataLaporan') || "[]");
-            
             if (list.length > jumlahDataLama) {
-                // Bunyikan suara
                 const sound = document.getElementById('notifSound');
-                sound.currentTime = 0; // Mulai dari awal suara
-                sound.play(); 
+                sound.currentTime = 0;
+                sound.play().catch(e => console.log("Sound error")); 
                 
-                // Update pembanding agar tidak bunyi terus-menerus
                 jumlahDataLama = list.length; 
-                
-                // Refresh tampilan
                 tampilData();
             }
         }
@@ -129,6 +126,11 @@
                 if(l.prioritas.includes('SAR')) badgeClass = "bg-yellow-400 text-black shadow-lg shadow-yellow-900/20"; 
                 if(l.prioritas.includes('SOS')) badgeClass = "bg-red-600 text-white animate-pulse border-2 border-white shadow-lg shadow-red-900/40";
 
+                // Perbaikan link maps untuk HP
+                const linkMaps = l.lokasi !== "Lokasi tidak diizinkan" 
+                    ? `https://www.google.com/maps?q=${l.lokasi}` 
+                    : "#";
+
                 return `
                 <div class="relative overflow-hidden p-6 rounded-[2.5rem] border-2 transition-all duration-500 ${l.sudahDitangani ? 'bg-slate-800/40 border-slate-700 done-glow' : 'bg-slate-800 border-red-600/40 emergency-glow'}">
                     <div class="flex justify-between items-center mb-4">
@@ -146,7 +148,7 @@
                     </div>
 
                     <div class="flex justify-between items-center pt-4 border-t border-slate-700/50">
-                        <a href="https://www.google.com/maps?q=${l.lokasi}" target="_blank" class="text-blue-400 text-[10px] font-black uppercase hover:underline flex items-center gap-1">📍 Lokasi Peta</a>
+                        <a href="${linkMaps}" target="_blank" class="text-blue-400 text-[10px] font-black uppercase hover:underline flex items-center gap-1">📍 Lokasi Peta</a>
                         
                         ${!l.sudahDitangani ? 
                             `<button onclick="tandaiSelesai(${indexAsli})" class="bg-white text-black hover:bg-green-600 hover:text-white px-6 py-2 rounded-xl text-[10px] font-black uppercase transition-all shadow-md">
@@ -156,17 +158,15 @@
                         }
                     </div>
                 </div>
-            `}).join('');
+                `;
+            }).join('');
         }
 
         function tandaiSelesai(index) {
             let list = JSON.parse(localStorage.getItem('dataLaporan') || "[]");
             list[index].sudahDitangani = true;
             localStorage.setItem('dataLaporan', JSON.stringify(list));
-            
-            // Update juga pembandingnya agar tidak dianggap data baru
             jumlahDataLama = list.length;
-            
             tampilData();
         }
     </script>
